@@ -53,7 +53,6 @@ if st.button("Processar PDFs"):
 
         embeddings = HuggingFaceEmbeddings(
             model_name=embedding_model_name,
-            huggingfacehub_api_token=token
         )
         vector_store = FAISS.from_texts(chunks, embedding=embeddings)
 
