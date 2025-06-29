@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 
 # Carrega variáveis de ambiente do .env (ou configure pelo Secrets do Streamlit Cloud)
 load_dotenv()
-HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
-if not HUGGINGFACE_TOKEN:
+token = os.getenv("HUGGINGFACE_TOKEN")
+if not token:
     st.error("Configure a variável HUGGINGFACE_TOKEN nos Secrets do Streamlit Cloud.")
     st.stop()
 
@@ -64,7 +64,7 @@ if question:
         # Criar o LLM usando token e configurando a tarefa correta
         llm = HuggingFaceHub(
             repo_id=llm_model,
-            token=HUGGINGFACE_TOKEN,
+            huggingfacehub_api_token=token,
             task="text-generation",
             model_kwargs={"temperature": 0.1, "max_new_tokens": 256},
         )
