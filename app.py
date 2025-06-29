@@ -77,7 +77,7 @@ if user_question:
 
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
-            chain_type="map_reduce", 
+            chain_type="stuff", 
             retriever=st.session_state.vector_store.as_retriever()
         )
 
