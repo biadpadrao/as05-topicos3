@@ -7,9 +7,9 @@ from langchain.chains import RetrievalQA
 from PyPDF2 import PdfReader
 import os
 
-HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN_AS05_API")
+HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 if not HUGGINGFACE_TOKEN:
-    st.error("Configure a variável HUGGINGFACE_TOKEN_AS05_API nos Secrets do Streamlit Cloud.")
+    st.error("Configure a variável HUGGINGFACE_TOKEN nos Secrets do Streamlit Cloud.")
     st.stop()
 
 # Modelos usados
