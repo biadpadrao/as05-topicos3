@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+.env
+pdfs/
+app-teste1.py
+pdf_loader.py
