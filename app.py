@@ -1,59 +1,68 @@
 import streamlit as st
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.llms import HuggingFaceHub
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
-from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA
-from langchain.llms import HuggingFaceHub
+from PyPDF2 import PdfReader
 import os
 
-HUGGINGFACE_TOKEN_AS05_API = os.getenv("HUGGINGFACE_TOKEN_AS05_API")
-if not HUGGINGFACE_TOKEN_AS05_API:
-    st.error("Configure a variável HUGGINGFACE_TOKEN_AS05_API nos secrets do Streamlit Cloud.")
+HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN_AS05_API")
+if not HUGGINGFACE_TOKEN:
+    st.error("Configure a variável HUGGINGFACE_TOKEN_AS05_API nos Secrets do Streamlit Cloud.")
     st.stop()
 
-embedding_model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-llm_model_name = "pierreguillou/bert-base-cased-squad-v1.1-portuguese" 
+# Modelos usados
+embedding_model = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+llm_model = "google/flan-t5-base"
 
-embeddings = HuggingFaceEmbeddings(model_name=embedding_model_name)
+# Função para extrair texto dos PDFs
+def extract_text_from_pdfs(pdfs):
+    texts = []
+    for pdf in pdfs:
+        reader = PdfReader(pdf)
+        text = ""
+        for page in reader.pages:
+            t = page.extract_text()
+            if t:
+                text += t + "\n"
+        texts.append(text)
+    return texts
 
-llm = HuggingFaceHub(
-    repo_id=llm_model_name,
-    huggingfacehub_api_token=HUGGINGFACE_TOKEN_AS05_API
-)
-
-# Configuração da interface
 st.set_page_config(page_title="Perguntas sobre PDF", layout="wide")
 st.title("Assistente Conversacional LLM para PDFs")
 st.subheader("Baseado na API da Hugging Face, para textos em pt-br")
 
-# Upload do PDF
-uploaded_file = st.file_uploader("Envie seu arquivo PDF", type=["pdf"])
+uploaded_pdfs = st.file_uploader("Envie seus PDFs", type="pdf", accept_multiple_files=True)
 
-if uploaded_file:
-    # Carregar PDF
-    loader = PyPDFLoader(uploaded_file)
-    documents = loader.load()
+if st.button("Processar PDFs"):
+    if uploaded_pdfs:
+        raw_texts = extract_text_from_pdfs(uploaded_pdfs)
 
-    # Dividir texto em chunks menores
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-    texts = splitter.split_documents(documents)
+        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+        chunks = []
+        for text in raw_texts:
+            chunks.extend(splitter.split_text(text))
 
-    # Indexar com FAISS
-    with st.spinner("Gerando embeddings e indexando documentos..."):
-        vectorstore = FAISS.from_documents(texts, embeddings)
+        embeddings = HuggingFaceEmbeddings(model_name=embedding_model)
+        vector_store = FAISS.from_texts(chunks, embedding=embeddings)
 
-    st.success(f"{len(texts)} pedaços indexados!")
+        st.session_state["vector_store"] = vector_store
+        st.success(f"Processados {len(uploaded_pdfs)} PDFs e criados {len(chunks)} chunks.")
+    else:
+        st.warning("Por favor, envie pelo menos um arquivo PDF.")
 
-    question = st.text_input("Digite sua pergunta sobre o documento:")
+question = st.text_input("Faça sua pergunta sobre os documentos:")
 
-    if question:
+if question:
+    if "vector_store" not in st.session_state:
+        st.warning("Primeiro faça o upload e processamento dos PDFs.")
+    else:
+        llm = HuggingFaceHub(repo_id=llm_model, huggingfacehub_api_token=HUGGINGFACE_TOKEN)
+
+        qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=st.session_state["vector_store"].as_retriever())
+
         with st.spinner("Buscando resposta..."):
-            qa = RetrievalQA.from_chain_type(
-                llm=llm,
-                chain_type="stuff",
-                retriever=vectorstore.as_retriever()
-            )
             answer = qa.run(question)
-        st.subheader("Resposta:")
-        st.write(answer)
+
+        st.markdown(f"**Resposta:** {answer}")
