@@ -57,7 +57,7 @@ if st.button("Processar PDFs"):
 
         embeddings = HuggingFaceEmbeddings(
             model_name=embedding_model,
-            huggingfacehub_api_token=HUGGINGFACE_TOKEN
+            token=HUGGINGFACE_TOKEN
         )
         vector_store = FAISS.from_texts(chunks, embedding=embeddings)
 
@@ -78,7 +78,7 @@ if question:
     else:
         llm = HuggingFaceHub(
             repo_id=llm_model,
-            huggingfacehub_api_token=HUGGINGFACE_TOKEN,
+            token=HUGGINGFACE_TOKEN,
             task="text-generation",
             model_kwargs={"temperature": 0.1, "max_new_tokens": 256},
         )
