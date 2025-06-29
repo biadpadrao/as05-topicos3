@@ -12,14 +12,18 @@ if not HUGGINGFACE_TOKEN:
     st.error("Configure a variável HUGGINGFACE_TOKEN nos Secrets do Streamlit Cloud.")
     st.stop()
 
-# Modelos usados
+# Limites para controle de recursos
+MAX_PDFS = 3
+MAX_CHUNKS = 50
+CHUNK_SIZE = 500
+CHUNK_OVERLAP = 50
+
 embedding_model = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 llm_model = "google/flan-t5-base"
 
-# Função para extrair texto dos PDFs
 def extract_text_from_pdfs(pdfs):
     texts = []
-    for pdf in pdfs:
+    for pdf in pdfs[:MAX_PDFS]:  # limita número de PDFs
         reader = PdfReader(pdf)
         text = ""
         for page in reader.pages:
@@ -33,25 +37,36 @@ st.set_page_config(page_title="Perguntas sobre PDF", layout="wide")
 st.title("Assistente Conversacional LLM para PDFs")
 st.subheader("Baseado na API da Hugging Face, para textos em pt-br")
 
-uploaded_pdfs = st.file_uploader("Envie seus PDFs", type="pdf", accept_multiple_files=True)
+uploaded_pdfs = st.file_uploader(
+    f"Envie até {MAX_PDFS} PDFs", type="pdf", accept_multiple_files=True
+)
 
 if st.button("Processar PDFs"):
     if uploaded_pdfs:
         raw_texts = extract_text_from_pdfs(uploaded_pdfs)
 
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP
+        )
         chunks = []
         for text in raw_texts:
             chunks.extend(splitter.split_text(text))
 
+        if len(chunks) > MAX_CHUNKS:
+            chunks = chunks[:MAX_CHUNKS]
+
         embeddings = HuggingFaceEmbeddings(
             model_name=embedding_model,
-            huggingfacehub_api_token=HUGGINGFACE_TOKEN  # corrigido aqui
+            huggingfacehub_api_token=HUGGINGFACE_TOKEN
         )
         vector_store = FAISS.from_texts(chunks, embedding=embeddings)
 
         st.session_state["vector_store"] = vector_store
-        st.success(f"Processados {len(uploaded_pdfs)} PDFs e criados {len(chunks)} chunks.")
+
+        del raw_texts
+        del chunks
+
+        st.success(f"Processados {len(uploaded_pdfs[:MAX_PDFS])} PDFs e criados {len(chunks)} chunks.")
     else:
         st.warning("Por favor, envie pelo menos um arquivo PDF.")
 
@@ -64,7 +79,7 @@ if question:
         llm = HuggingFaceHub(
             repo_id=llm_model,
             huggingfacehub_api_token=HUGGINGFACE_TOKEN,
-            task="text-generation",  
+            task="text-generation",
             model_kwargs={"temperature": 0.1, "max_new_tokens": 256},
         )
 
