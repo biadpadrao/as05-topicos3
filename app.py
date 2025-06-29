@@ -77,8 +77,8 @@ if user_question:
 
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
-            chain_type="stuff",
-            retriever=st.session_state.vector_store.as_retriever()
+            chain_type="map_reduce",
+            retriever=st.session_state["vector_store"].as_retriever()
         )
 
         with st.spinner("Buscando resposta..."):
