@@ -1,7 +1,9 @@
 streamlit
-langchain
+langchain>=0.2.0
+langchain-community
 faiss-cpu
 PyPDF2
 python-dotenv
-huggingface_hub
+huggingface_hub==0.17.1
 requests
+sentence-transformers>=2.7.0
