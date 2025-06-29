@@ -44,7 +44,10 @@ if st.button("Processar PDFs"):
         for text in raw_texts:
             chunks.extend(splitter.split_text(text))
 
-        embeddings = HuggingFaceEmbeddings(model_name=embedding_model)
+        embeddings = HuggingFaceEmbeddings(
+            model_name=embedding_model,
+            huggingfacehub_api_token=HUGGINGFACE_TOKEN  # corrigido aqui
+        )
         vector_store = FAISS.from_texts(chunks, embedding=embeddings)
 
         st.session_state["vector_store"] = vector_store
@@ -58,9 +61,18 @@ if question:
     if "vector_store" not in st.session_state:
         st.warning("Primeiro faça o upload e processamento dos PDFs.")
     else:
-        llm = HuggingFaceHub(repo_id=llm_model, huggingfacehub_api_token=HUGGINGFACE_TOKEN)
+        llm = HuggingFaceHub(
+            repo_id=llm_model,
+            huggingfacehub_api_token=HUGGINGFACE_TOKEN,
+            task="text-generation",  
+            model_kwargs={"temperature": 0.1, "max_new_tokens": 256},
+        )
 
-        qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=st.session_state["vector_store"].as_retriever())
+        qa = RetrievalQA.from_chain_type(
+            llm=llm,
+            chain_type="stuff",
+            retriever=st.session_state["vector_store"].as_retriever(),
+        )
 
         with st.spinner("Buscando resposta..."):
             answer = qa.run(question)
