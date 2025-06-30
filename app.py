@@ -64,11 +64,15 @@ if st.button("Processar PDFs"):
 
 # Definir template prompt 
 prompt_template = """
+Baseado no contexto fornecido, responda à pergunta de forma clara e concisa. Se a resposta não estiver presente no contexto, informe que não foi possível encontrar a informação.
+
+Contexto: {context}
+
 Pergunta: {question}
 
 Resposta:
 """
-prompt = PromptTemplate(template=prompt_template, input_variables=["question"])
+prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 
 # Entrada da pergunta
 user_question = st.chat_input("Faça sua pergunta sobre os documentos:")
