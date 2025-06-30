@@ -8,6 +8,7 @@ from langchain.prompts import PromptTemplate
 from PyPDF2 import PdfReader
 import os
 from dotenv import load_dotenv
+from huggingface_hub import HfHubHTTPError
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -62,7 +63,7 @@ if st.button("Processar PDFs"):
     else:
         st.warning("Por favor, envie pelo menos um arquivo PDF.")
 
-# Definir template de prompt
+# Definir template prompt 
 prompt_template = """
 Use o contexto a seguir para responder à pergunta de forma concisa e direta. Não inclua o contexto na resposta, apenas a informação solicitada.
 
@@ -82,28 +83,37 @@ if user_question:
     if "vector_store" not in st.session_state:
         st.warning("Faça o upload e processamento dos PDFs primeiro.")
     else:
-        llm = HuggingFaceHub(
-            repo_id=llm_model_name,
-            huggingfacehub_api_token=token,
-            model_kwargs={"temperature": 0.01, "max_new_tokens": 100}
-        )
+        try:
+            llm = HuggingFaceHub(
+                repo_id=llm_model_name,
+                huggingfacehub_api_token=token,
+                model_kwargs={"temperature": 0.01, "max_new_tokens": 100}
+            )
 
-        retriever = st.session_state.vector_store.as_retriever(search_kwargs={"k": 1})
+            retriever = st.session_state.vector_store.as_retriever(search_kwargs={"k": 1})
 
-        qa_chain = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",
-            retriever=retriever,
-            chain_type_kwargs={"prompt": prompt}
-        )
+            qa_chain = RetrievalQA.from_chain_type(
+                llm=llm,
+                chain_type="stuff",
+                retriever=retriever,
+                chain_type_kwargs={"prompt": prompt}
+            )
 
-        with st.spinner("Buscando resposta..."):
-            answer = qa_chain.run(user_question)
+            with st.spinner("Buscando resposta..."):
+                response = qa_chain.invoke({"query": user_question})
+                answer = response.get("result", "Erro ao obter a resposta.")
 
-        with st.chat_message("user"):
-            st.markdown(user_question)
-        st.session_state.messages.append({"role": "user", "content": user_question})
+            with st.chat_message("user"):
+                st.markdown(user_question)
+            st.session_state.messages.append({"role": "user", "content": user_question})
 
-        with st.chat_message("assistant"):
-            st.markdown(answer)
-        st.session_state.messages.append({"role": "assistant", "content": answer})
+            with st.chat_message("assistant"):
+                st.markdown(answer)
+            st.session_state.messages.append({"role": "assistant", "content": answer})
+
+        except HfHubHTTPError as e:
+            st.error(f"Erro ao acessar a API da Hugging Face: {str(e)}")
+            st.info("Verifique seu token de API, limites de taxa ou tente outro modelo.")
+        except Exception as e:
+            st.error(f"Erro inesperado: {str(e)}")
+            st.info("Consulte os logs para mais detalhes ou tente novamente.")
