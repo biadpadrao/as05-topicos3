@@ -8,7 +8,6 @@ from langchain.prompts import PromptTemplate
 from PyPDF2 import PdfReader
 import os
 from dotenv import load_dotenv
-from huggingface_hub import HfHubHTTPError
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -111,9 +110,6 @@ if user_question:
                 st.markdown(answer)
             st.session_state.messages.append({"role": "assistant", "content": answer})
 
-        except HfHubHTTPError as e:
-            st.error(f"Erro ao acessar a API da Hugging Face: {str(e)}")
-            st.info("Verifique seu token de API, limites de taxa ou tente outro modelo.")
         except Exception as e:
             st.error(f"Erro inesperado: {str(e)}")
             st.info("Consulte os logs para mais detalhes ou tente novamente.")
