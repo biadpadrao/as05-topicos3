@@ -33,7 +33,7 @@ def extract_text_from_pdfs(pdf_files):
 
 st.set_page_config(page_title="Perguntas sobre PDF", layout="wide")
 st.title("Assistente Conversacional LLM para PDFs")
-st.subheader("Baseado na API da Hugging Face, para textos em pt-br")
+st.subheader("Baseado na API da Hugging Face - ideal para textos em Inglês")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -64,15 +64,11 @@ if st.button("Processar PDFs"):
 
 # Definir template prompt 
 prompt_template = """
-Use o contexto a seguir para responder à pergunta de forma concisa e direta. Não inclua o contexto na resposta, apenas a informação solicitada.
-
-Contexto: {context}
-
 Pergunta: {question}
 
 Resposta:
 """
-prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
+prompt = PromptTemplate(template=prompt_template, input_variables=["question"])
 
 # Entrada da pergunta
 user_question = st.chat_input("Faça sua pergunta sobre os documentos:")
